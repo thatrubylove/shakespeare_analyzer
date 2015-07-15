@@ -1,7 +1,7 @@
 module Printer
   extend self
 
-  def call(counts)
-    counts.each { |count| puts count.to_s }
+  def call(speakers)
+    speaker.each { |speaker| puts speaker.to_s }
   end
 end

@@ -1,10 +1,10 @@
 require_relative 'speaker'
 
-module SpeakerCountsFromXml
+module SpeakersFromXml
   extend self
 
   def call(xml)
-    speaker_line_counts_from(xml)
+    speakers_from(xml)
   end
 
 protected
@@ -13,11 +13,11 @@ protected
     Nokogiri::XML(xml)
   end
 
-  def speaker_line_counts_from(xml)
+  def speakers_from(xml)
     xml_doc(xml).search('SPEECH').map do |speech|
       speaker = speech.at('SPEAKER').text
       lines   = speech.search('LINE').map(&:text)
-      Speaker.new(speaker, lines.count)
+      Speaker.new(speaker, lines)
     end
   end
 end

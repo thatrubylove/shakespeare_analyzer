@@ -1,29 +1,29 @@
 module SpeakerAggregator
   extend self
 
-  def call(counts)
-    sort(aggregate(counts))
+  def call(speakers)
+    sort(aggregate(speakers))
   end
 
 protected
 
-  def speakers(counts)
-    counts.map(&:name).uniq
+  def speaker_names(speakers)
+    speakers.map(&:name).uniq
   end
 
-  def sort(counts)
-    counts.sort { |a, b| b.line_count <=> a.line_count }
+  def sort(speakers)
+    speakers.sort { |a, b| b.line_count <=> a.line_count }
   end
 
-  def aggregate(counts)
-    speakers(counts).reduce([]) do |acc, speaker|
-      line_counts = sum_lines_by_speaker(counts, speaker)
-      acc << Speaker.new(speaker, line_counts)
+  def aggregate(speakers)
+    speaker_names(speakers).reduce([]) do |acc, name|
+      lines = aggregate_lines_by_speaker(speakers, name)
+      acc << Speaker.new(name, lines)
     end
   end
 
-  def sum_lines_by_speaker(list, speaker)
-    lc = list.select { |obj| obj.name == speaker }.map(&:line_count)
-    lc.reduce(:+)
+  def aggregate_lines_by_speaker(speakers, name)
+    speakers.select { |obj| obj.name == name }.
+             flat_map(&:lines)
   end
 end
