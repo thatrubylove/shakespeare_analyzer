@@ -1,0 +1,22 @@
+#!/usr/bin/env ruby
+# cat macbeth.xml | xargs -0 ./lc
+
+require 'nokogiri'
+
+doc          = Nokogiri::XML(ARGV[0])
+speeches     = doc.search('SPEECH')
+spoken_lines = speeches.map {|s| [s.at('SPEAKER').text, 
+                                  s.search('LINE').map(&:text)] }
+speakers     = spoken_lines.map {|speaker, lines| speaker }.uniq
+aggregated   = speakers.map {|name|
+  {
+    speaker: name,
+    count:   spoken_lines.select {|l| l[0] == name }.
+                          reduce([]) {|acc, line| acc << line[1] }.
+                          flatten.count
+  }
+}
+
+sorted = aggregated.sort {|a,b| b[:count] <=> a[:count] }
+
+puts sorted.map{|s| [s[:count], "\t", s[:speaker]].join }.join("\n")
