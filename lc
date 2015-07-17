@@ -5,9 +5,9 @@ require 'nokogiri'
 
 doc          = Nokogiri::XML(ARGV[0])
 speeches     = doc.search('SPEECH')
+speakers     = doc.search('SPEAKER').map(&:text).uniq
 spoken_lines = speeches.map {|s| [s.at('SPEAKER').text, 
                                   s.search('LINE').map(&:text)] }
-speakers     = spoken_lines.map {|speaker, lines| speaker }.uniq
 aggregated   = speakers.map {|name|
   {
     speaker: name,
@@ -17,6 +17,8 @@ aggregated   = speakers.map {|name|
   }
 }
 
-sorted = aggregated.sort {|a,b| b[:count] <=> a[:count] }
+sorted    = aggregated.sort {|a,b| b[:count] <=> a[:count] }
+formatted = sorted.map{|s| [s[:count], "\t", s[:speaker]].join }.
+                   join("\n")
 
-puts sorted.map{|s| [s[:count], "\t", s[:speaker]].join }.join("\n")
+puts formatted
