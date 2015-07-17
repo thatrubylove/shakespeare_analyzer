@@ -3,26 +3,43 @@
 
 require 'nokogiri'
 
-doc          = Nokogiri::XML(ARGV[0])
-speeches     = doc.search('SPEECH')
-speakers     = doc.search('SPEAKER').map(&:text).uniq
-
-
-spoken_lines = speeches.map {|s| { name:  s.at('SPEAKER').text, 
-                                   lines: s.search('LINE').map(&:text) } }
-
-aggregated   = speakers.map {|name|
-  {
-    name:  name,
-    count: spoken_lines.select {|l| l[:name] == name }.
-                        reduce([]) {|acc, line| acc << line[:lines] }.
-                        flatten.count
-  }
+get_speakers =->(doc) {
+  doc.search('SPEAKER').map(&:text).uniq
 }
 
-sorted    = aggregated.sort {|a,b| b[:count] <=> a[:count] }
+get_lines =->(doc) {
+  doc.search('SPEECH').map do |s|
+    { name:  s.at('SPEAKER').text, 
+      lines: s.search('LINE').map(&:text) }
+  end
+}
 
-formatted = sorted.map{|s| [s[:count], "\t", s[:name]].join }.
-                   join("\n")
+count_lines =->(name, lines) {
+  lines.select     {|l|         l[:name] == name    }.
+        reduce([]) {|acc, line| acc << line[:lines] }.
+        flatten.count
+}
 
-puts formatted
+aggregate =->(speakers, lines) {
+  speakers.map do |name|
+    { name:  name,
+      count: count_lines.(name, lines) }
+  end
+}
+
+sort_desc =->(list) {
+  list.sort {|a,b| b[:count] <=> a[:count] }
+}
+
+formatted =->(list) {
+  list.map{|s| [s[:count], "\t", s[:name]].join }.
+       join("\n") 
+}
+
+doc      = Nokogiri::XML(ARGV[0])
+speakers = get_speakers.(doc)
+lines    = get_lines.(doc)
+
+puts formatted.(
+       sort_desc.(
+         aggregate.( speakers, lines ) ) )
