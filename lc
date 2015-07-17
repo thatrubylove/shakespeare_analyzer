@@ -3,43 +3,52 @@
 
 require 'nokogiri'
 
-get_speakers =->(doc) {
-  doc.search('SPEAKER').map(&:text).uniq
-}
-
-get_lines =->(doc) {
-  doc.search('SPEECH').map do |s|
-    { name:  s.at('SPEAKER').text, 
-      lines: s.search('LINE').map(&:text) }
+class Actor < Struct.new(:name, :lines)
+  def line_count
+    lines.count
   end
-}
+end
 
-count_lines =->(name, lines) {
-  lines.select     {|l|         l[:name] == name    }.
-        reduce([]) {|acc, line| acc << line[:lines] }.
-        flatten.count
-}
-
-aggregate =->(speakers, lines) {
-  speakers.map do |name|
-    { name:  name,
-      count: count_lines.(name, lines) }
+class Play
+  def initialize(xml)
+    @doc = parse_xml(xml)
   end
-}
 
-sort_desc =->(list) {
-  list.sort {|a,b| b[:count] <=> a[:count] }
-}
+  def actors
+    @actors ||= doc.search('SPEAKER').map(&:text).uniq
+  end
 
-formatted =->(list) {
-  list.map{|s| [s[:count], "\t", s[:name]].join }.
-       join("\n") 
-}
+  def dialogs
+    @dialogs ||= doc.search('SPEECH').map do |s|
+      Actor.new(s.at('SPEAKER').text, s.search('LINE').map(&:text))
+    end
+  end
 
-doc      = Nokogiri::XML(ARGV[0])
-speakers = get_speakers.(doc)
-lines    = get_lines.(doc)
+  def lines_for(name)
+    dialogs.select {|s| s.name == name }.
+            map(&:lines).
+            flatten
+  end
 
-puts formatted.(
-       sort_desc.(
-         aggregate.( speakers, lines ) ) )
+  def aggregated_lines
+    actors.map do |name|
+      Actor.new(name, lines_for(name))
+    end
+  end
+
+  def sorted_line_counts
+    aggregated_lines.sort {|a,b| b.line_count <=> a.line_count }
+  end
+
+private
+  attr_reader :doc
+
+  def parse_xml(xml)
+    Nokogiri::XML(xml)
+  end
+
+end
+
+Play.new(ARGV[0]).sorted_line_counts.each do |actor| 
+  puts [actor.line_count, "\t", actor.name, "\n"].join
+end
